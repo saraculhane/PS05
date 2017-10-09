@@ -1,6 +1,6 @@
 ---
 title: "STAT/MATH 495: Problem Set 05"
-author: "WRITE YOUR NAME HERE"
+author: "Sara Culhane"
 date: "2017-10-11"
 output:
   html_document:
@@ -21,13 +21,19 @@ set.seed(76)
 
 # Load packages
 library(tidyverse)
-
+library(lubridate)
 # Note the relative file path, and not absolute file path:
 train <- read_csv("data/train.csv")
 test <- read_csv("data/test.csv")
 sample_submission <- read_csv("data/sampleSubmission.csv")
 ```
 
+```{r, include = FALSE}
+RMSE <- function(x) { # simple function for RMSE
+  r <- sqrt(mean(x^2))
+  return(r)
+}
+```
 
 # Collaboration
 
@@ -37,21 +43,66 @@ Please indicate who you collaborated with on this assignment:
 # Exploratory Data Analysis
 
 Information on the competition can be found [here](https://www.kaggle.com/c/bike-sharing-demand).
-
 ```{r}
-
+ggplot(train,aes(x =temp, y =count)) +
+  geom_point()
+ggplot(train,aes(x =workingday, y =count)) +
+  geom_point()
+ggplot(train,aes(x =atemp, y =count)) +
+  geom_point()
+ggplot(train,aes(x =holiday, y =count)) +
+  geom_point()
+ggplot(train,aes(x =weather, y =count)) +
+  geom_point()
+ggplot(train,aes(x =windspeed, y =count)) +
+  geom_point()
+ggplot(train,aes(x =humidity, y =count)) +
+  geom_point()
+```
+```{r}
+model <- list() # Store all 7 models in a list
+model[[1]] <- as.formula("count ~ 1")
+model[[2]] <- as.formula("count ~ temp")
+model[[3]]<- as.formula("count ~ workingday")
+model[[4]] <- as.formula("count ~ temp + workingday")
+model[[5]] <- as.formula("count ~ temp + workingday +weather")
+model[[6]]<- as.formula("count ~ atemp + holiday")
+model[[7]] <- as.formula("count ~ atemp + holiday + weather")
+model[[8]] <- as.formula("count ~ atemp")
+model[[9]] <- as.formula("count ~ windspeed")
+model[[10]] <- as.formula("count ~ weather")
+model[[11]] <- as.formula("count ~ humidity")
+model[[12]] <- as.formula("count ~ windspeed+workingday+holiday")
+model[[13]] <- as.formula("count ~ windspeed+workingday+weather")
+model[[14]] <- as.formula("count ~ windspeed+weather+atemp")
+model[[15]] <- as.formula("count ~ windspeed+weather+temp")
 ```
 
 
 # Model Fit
 
 ```{r}
+RMSE_test <- runif(n=length(model))
+f <- function(list)  {
+  for (i in 1:length(model)) { # predict and calcualte RMSE for all 7 models
+    RMSE_test[i] <- RMSE(predict(lm(list[[i]],data=train),test) - train$count) # Store test RMSE
+  }
+  return(RMSE_test) # return data frame
+}
+results <- f(model) 
+RMSE(predict(lm(model[[14]],data=train),test)-train$count)
+m <- lm(model[[14]], data=train)
+summary(m)
+test$count <- round(predict(lm(model[[14]],data=train),test))
+test$count <- replace(test$count,test$count < 0 , 0)
 
+sub <- test %>% select(datetime,count)
+sub$datetime <- as.character(sub$datetime)
 ```
 
 
 # Create Submission File
 
 ```{r}
-
+write_csv(sub,"submission.csv")
 ```
